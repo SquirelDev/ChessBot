@@ -8,11 +8,14 @@ from . import network
 from . import replay_buffer
 from . import self_play
 from . import train
+from . import utils
 
 def main():
     """
     The main function to orchestrate the AlphaZero training pipeline.
     """
+    utils.setup_gpu()
+
     # 1. Initialization
     # ------------------
     # Create the neural network

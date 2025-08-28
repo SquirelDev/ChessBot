@@ -29,6 +29,9 @@ def run_game(model_path: str):
     Runs a single game of self-play and returns the game history.
     This function is designed to be called in a separate process.
     """
+    # Configure the GPU for this worker process
+    utils.setup_gpu()
+
     # Load the latest version of the network for this game
     model = network.create_model()
     model.load_weights(model_path)

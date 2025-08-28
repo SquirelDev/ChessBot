@@ -61,3 +61,24 @@ def board_to_tensor(board: chess.Board) -> np.ndarray:
     if board.turn == chess.WHITE: tensor[:, :, 17] = 1
     else: tensor[:, :, 17] = 0 # Explicitly set to 0 for black's turn
     return tensor
+
+# --- GPU Configuration ---
+
+def setup_gpu():
+    """
+    Configures TensorFlow to use GPU memory growth.
+    This prevents TensorFlow from allocating all of a GPU's memory at once,
+    which is crucial for running multiple processes on the same GPU.
+    """
+    import tensorflow as tf
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Set memory growth for each GPU
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.list_logical_devices('GPU')
+            print(f"Initialized {len(gpus)} Physical GPUs, {len(logical_gpus)} Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(f"Error setting up GPU memory growth: {e}")
