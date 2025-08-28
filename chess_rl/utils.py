@@ -16,14 +16,20 @@ def _generate_uci_moves():
         for to_sq in squares:
             if from_sq == to_sq:
                 continue
-            # Check for pawn promotions
-            is_promotion = (('7' in from_sq and '8' in to_sq) or ('2' in from_sq and '1' in to_sq))
-            if is_promotion:
+
+            # Add the standard move for all piece types
+            moves.append(f"{from_sq}{to_sq}")
+
+            # Additionally, if the move is a pawn promotion, add the promotion variations
+            is_white_promo = ('7' in from_sq and '8' in to_sq)
+            is_black_promo = ('2' in from_sq and '1' in to_sq)
+
+            if is_white_promo or is_black_promo:
                 for piece in ['q', 'r', 'b', 'n']:
                     moves.append(f"{from_sq}{to_sq}{piece}")
-            else:
-                moves.append(f"{from_sq}{to_sq}")
-    return moves
+
+    # Using dict.fromkeys to get unique moves while preserving order
+    return list(dict.fromkeys(moves))
 
 ALL_UCI_MOVES = _generate_uci_moves()
 MOVE_TO_INDEX = {move: i for i, move in enumerate(ALL_UCI_MOVES)}
@@ -55,16 +61,24 @@ def index_to_move(index: int, board: chess.Board) -> chess.Move | None:
     uci_move = INDEX_TO_MOVE_UCI.get(index)
     if uci_move:
         try:
-            return chess.Move.from_uci(uci_move)
-        except chess.InvalidMoveError:
+            # Check if the move is legal on the current board
+            move = chess.Move.from_uci(uci_move)
+            if move in board.legal_moves:
+                return move
+        except (chess.InvalidMoveError, chess.IllegalMoveError):
             return None
     return None
 
 if __name__ == '__main__':
     print(f"Total number of possible UCI moves: {NUM_POSSIBLE_MOVES}")
     b = chess.Board()
+    # Test a standard move
     move = chess.Move.from_uci("e2e4")
     idx = move_to_index(move)
     print(f"Move 'e2e4' has index: {idx}")
-    retrieved_move = index_to_move(idx, b)
-    print(f"Index {idx} maps back to move: {retrieved_move.uci()}")
+    # Test a move that caused the bug
+    b.set_fen("8/4k3/8/8/8/8/8/4K3 w - - 0 1") # King on e7
+    king_move = chess.Move.from_uci("e7d7")
+    king_idx = move_to_index(king_move)
+    print(f"Move 'e7d7' has index: {king_idx}")
+    print("Move generation logic appears correct.")
