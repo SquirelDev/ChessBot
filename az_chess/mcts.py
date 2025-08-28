@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import tensorflow as tf
+import chess
 
 from . import config
 from . import utils
@@ -94,7 +95,11 @@ def run_mcts(board, network, simulations: int = config.MCTS_SIMULATIONS):
             action, node = node.select_child()
             if node is None: # Should not happen if there are legal moves
                 break
-            current_board.push(utils.INDEX_TO_MOVE_UCI[action])
+
+            # Convert the action index to a move object and push it to the board
+            move_uci = utils.INDEX_TO_MOVE_UCI[action]
+            current_board.push(chess.Move.from_uci(move_uci))
+
             search_path.append(node)
 
         if node is None: continue # Path ended unexpectedly
