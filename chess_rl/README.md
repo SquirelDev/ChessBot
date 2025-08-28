@@ -101,6 +101,12 @@ python evaluate.py --skill-level 8 --num-games 20
 ```
 This will play 20 games against Stockfish at skill level 8.
 
+## 7. Interactive Training with a Notebook
+
+For a more interactive way to experiment with the training process, you can use the `train_notebook.ipynb`. This notebook contains a simplified, single-threaded version of the training loop. It is great for debugging and understanding the core logic, but it is much slower than the main `train.py` script.
+
+To use it, start Jupyter Notebook and open the `train_notebook.ipynb` file, then run the cells sequentially.
+
 ## Project Structure
 ```
 chess_rl/
@@ -111,5 +117,6 @@ chess_rl/
 ├── train.py                    # The main training script
 ├── utils.py                    # Helper functions for board representation and move mapping
 ├── visualize_training.ipynb    # Jupyter notebook for visualizing training logs
+├── train_notebook.ipynb        # Jupyter notebook for interactive training
 └── evaluate.py                 # Script for evaluating the model against Stockfish
 ```
