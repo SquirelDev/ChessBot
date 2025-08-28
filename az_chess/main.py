@@ -24,14 +24,24 @@ def main():
     if not os.path.exists(config.CHECKPOINT_DIR):
         os.makedirs(config.CHECKPOINT_DIR)
 
+    # Check for the latest checkpoint to resume training
+    latest_model_path = os.path.join(config.CHECKPOINT_DIR, "latest_model.h5")
+    if os.path.exists(latest_model_path):
+        print(f"Resuming training from checkpoint: {latest_model_path}")
+        current_network.load_weights(latest_model_path)
+    else:
+        print("Starting new training session.")
+
     print("AlphaZero Chess Engine: Initialization Complete.")
     print(f"Running on {config.NUM_WORKERS} parallel workers.")
 
     # 2. Main Training Loop
     # ---------------------
-    # Save the initial model weights
+    # Path for the latest model weights, used by workers
     latest_model_path = os.path.join(config.CHECKPOINT_DIR, "latest_model.h5")
-    current_network.save_weights(latest_model_path)
+    # Save the initial weights if starting a new session
+    if not os.path.exists(latest_model_path):
+        current_network.save_weights(latest_model_path)
 
     for step in range(1, config.TRAINING_STEPS + 1):
         print(f"\n--- Training Step {step}/{config.TRAINING_STEPS} ---")

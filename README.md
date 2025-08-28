@@ -60,7 +60,19 @@ To start the full training pipeline, run the `main.py` script:
 ```bash
 python -m az_chess.main
 ```
-This will start the main orchestrator, which will in turn launch the self-play workers. The system will create a `checkpoints/` directory to save model weights periodically. You can monitor the progress from the console output. The training is designed to run for a long time (many hours or days).
+This will start the main orchestrator, which will in turn launch the self-play workers. The system will create a `checkpoints/` directory to save model weights.
+
+#### Stopping and Resuming
+The training process is designed to be stopped and resumed at any time.
+- To **stop**, simply use `Ctrl+C` in the terminal where the script is running.
+- To **resume**, just run the same command again: `python -m az_chess.main`. The script will automatically find the `latest_model.h5` checkpoint in the `checkpoints/` directory and continue from there.
+
+### 5. Interactive Demonstration
+For a step-by-step, interactive walkthrough of the training loop, you can use the provided Jupyter notebook.
+```bash
+jupyter notebook az_chess/train_notebook.ipynb
+```
+This notebook is for educational and debugging purposes and runs a much-simplified, single-threaded version of the pipeline.
 
 ## Project Structure
 ```
@@ -75,5 +87,6 @@ This will start the main orchestrator, which will in turn launch the self-play w
     ├── network.py          # ResNet neural network architecture
     ├── replay_buffer.py    # The experience replay buffer
     ├── self_play.py        # Self-play game generation logic
-    └── train.py            # The network training step logic
+    ├── train.py            # The network training step logic
+    └── train_notebook.ipynb # Notebook for demonstration
 ```
