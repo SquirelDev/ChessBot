@@ -1,6 +1,7 @@
 import os
 import time
 from concurrent import futures
+import multiprocessing
 
 from . import config
 from . import network
@@ -100,6 +101,12 @@ def main():
 
 
 if __name__ == '__main__':
-    # Note: Multiprocessing with TensorFlow can have issues with some CUDA
-    # versions and setups. It's recommended to run this from the command line.
+    # Set the start method to 'spawn' to avoid CUDA initialization issues
+    # in child processes. This is crucial for TensorFlow + multiprocessing.
+    # 'force=True' is used to override the default if it has already been set.
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass # The context can only be set once.
+
     main()
