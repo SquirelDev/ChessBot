@@ -69,13 +69,47 @@ The script will start the learner and worker processes. The workers will begin p
 
 You will see output from the workers as they finish games and from the learner as it completes training steps.
 
+## 5. Visualizing Training Progress
+
+After you have run the training script for a while, a `training_log.csv` file will be created in the `trained_model/` directory. You can visualize the training progress by running the Jupyter notebook.
+
+First, make sure you have Jupyter installed and running:
+```bash
+pip install notebook
+jupyter notebook
+```
+
+Then, from the Jupyter interface in your browser, open the `visualize_training.ipynb` notebook and run the cells. This will generate plots showing the training losses over time.
+
+## 6. Evaluating the Model
+
+To evaluate your trained model's performance, you can use the `evaluate.py` script. This script will play a number of games between your model and a Stockfish opponent.
+
+**Usage:**
+```bash
+python evaluate.py [OPTIONS]
+```
+
+**Options:**
+- `--model-path`: Path to the saved model file (e.g., `trained_model/chess_model.h5`).
+- `--skill-level`: Stockfish's skill level to play against (0-20, default: 5).
+- `--num-games`: The number of games to play for the evaluation (default: 10).
+
+**Example:**
+```bash
+python evaluate.py --skill-level 8 --num-games 20
+```
+This will play 20 games against Stockfish at skill level 8.
+
 ## Project Structure
 ```
 chess_rl/
-├── README.md           # This file
-├── config.py           # Configuration for Stockfish path and hyperparameters
-├── model.py            # The neural network model definition
-├── requirements.txt    # Python dependencies
-├── train.py            # The main training script
-└── utils.py            # Helper functions for board representation and move mapping
+├── README.md                   # This file
+├── config.py                   # Configuration for Stockfish path and hyperparameters
+├── model.py                    # The neural network model definition
+├── requirements.txt            # Python dependencies
+├── train.py                    # The main training script
+├── utils.py                    # Helper functions for board representation and move mapping
+├── visualize_training.ipynb    # Jupyter notebook for visualizing training logs
+└── evaluate.py                 # Script for evaluating the model against Stockfish
 ```

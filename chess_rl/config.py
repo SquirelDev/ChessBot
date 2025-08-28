@@ -36,3 +36,6 @@ MODEL_DIR = "trained_model"
 
 # The filename for the saved model.
 MODEL_FILENAME = "chess_model.h5"
+
+# The filename for the training log.
+TRAINING_LOG_FILE = "training_log.csv"

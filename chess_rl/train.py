@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import time
 from queue import Empty
+import csv
 
 import chess
 import numpy as np
@@ -91,7 +92,7 @@ def worker(worker_id, data_queue, model_path):
 
     print(f"Worker {worker_id}: Finished all games.")
 
-def learner(data_queue, model_path):
+def learner(data_queue, model_path, log_path):
     """
     The learner process that trains the neural network on data from the workers.
     """
@@ -109,16 +110,25 @@ def learner(data_queue, model_path):
         print(f"Learner: Loading model from {model_path}")
         chess_model.load_weights(model_path)
 
+    # 2. Setup logging
+    log_file_exists = os.path.exists(log_path)
+    with open(log_path, 'a', newline='') as f:
+        writer = csv.writer(f)
+        if not log_file_exists:
+            writer.writerow(['step', 'total_loss', 'policy_loss', 'value_loss', 'timestamp'])
+
     training_data = []
+    step = 0
 
     while True: # Loop indefinitely to train
         try:
             # Get data from workers
-            game_data = data_queue.get(timeout=30) # Wait for 30s
+            game_data = data_queue.get(timeout=60) # Wait for 60s
             training_data.extend(game_data)
 
             if len(training_data) >= config.BATCH_SIZE:
-                print(f"Learner: Collected {len(training_data)} samples. Starting training.")
+                step += 1
+                print(f"Learner: Collected {len(training_data)} samples. Starting training step {step}.")
 
                 # Sample a batch from the collected data
                 indices = np.random.choice(len(training_data), config.BATCH_SIZE, replace=False)
@@ -140,7 +150,16 @@ def learner(data_queue, model_path):
                 grads = tape.gradient(total_loss, chess_model.trainable_variables)
                 optimizer.apply_gradients(zip(grads, chess_model.trainable_variables))
 
-                print(f"Learner: Training step completed. Total Loss: {total_loss.numpy():.4f}, Policy Loss: {policy_loss.numpy():.4f}, Value Loss: {value_loss.numpy():.4f}")
+                total_loss_val = total_loss.numpy()
+                policy_loss_val = policy_loss.numpy()
+                value_loss_val = value_loss.numpy()
+
+                print(f"Learner: Step {step} completed. Total Loss: {total_loss_val:.4f}, Policy Loss: {policy_loss_val:.4f}, Value Loss: {value_loss_val:.4f}")
+
+                # Log metrics
+                with open(log_path, 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([step, total_loss_val, policy_loss_val, value_loss_val, time.time()])
 
                 # Save the updated model
                 chess_model.save_weights(model_path)
@@ -162,13 +181,14 @@ if __name__ == '__main__':
         os.makedirs(config.MODEL_DIR)
 
     model_path = os.path.join(config.MODEL_DIR, config.MODEL_FILENAME)
+    log_path = os.path.join(config.MODEL_DIR, config.TRAINING_LOG_FILE)
 
     # Use a manager for the queue
     manager = multiprocessing.Manager()
     data_queue = manager.Queue()
 
     # Start the learner process
-    learner_process = multiprocessing.Process(target=learner, args=(data_queue, model_path))
+    learner_process = multiprocessing.Process(target=learner, args=(data_queue, model_path, log_path))
     learner_process.start()
 
     # Start worker processes

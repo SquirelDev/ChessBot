@@ -1,3 +1,6 @@
 tensorflow
 python-chess
 stockfish
+pandas
+matplotlib
+notebook
