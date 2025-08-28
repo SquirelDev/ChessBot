@@ -66,3 +66,12 @@ LEARNING_RATE = 0.001
 # Directory to save model checkpoints and logs.
 CHECKPOINT_DIR = "checkpoints"
 LOG_DIR = "logs"
+
+# -----------------------------------------------------------------------------
+# Evaluation Configuration
+# -----------------------------------------------------------------------------
+
+# Path to the Stockfish engine executable.
+# Required for running the evaluation script.
+# Download from: https://stockfishchess.org/download/
+STOCKFISH_PATH = "/path/to/stockfish"

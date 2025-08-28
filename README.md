@@ -81,6 +81,18 @@ jupyter notebook az_chess/train_notebook.ipynb
 ```
 This notebook is for educational and debugging purposes and runs a much-simplified, single-threaded version of the pipeline.
 
+### 6. Evaluating the Model
+To gauge the strength of your trained model, you can run the evaluation script. It will play a series of matches against Stockfish at various skill levels and provide an estimated Elo rating based on the results.
+
+```bash
+python -m az_chess.evaluate --model-path checkpoints/latest_model.h5 --num-games 20
+```
+
+- `--model-path`: **Required.** Path to the model checkpoint you want to evaluate.
+- `--num-games`: The number of games to play per match (default: 10). More games lead to a more accurate rating.
+
+The script will output the match results and an Elo estimate for each skill level, giving you a clear picture of your model's progress.
+
 ## Project Structure
 ```
 .
@@ -95,5 +107,6 @@ This notebook is for educational and debugging purposes and runs a much-simplifi
     ├── replay_buffer.py    # The experience replay buffer
     ├── self_play.py        # Self-play game generation logic
     ├── train.py            # The network training step logic
+    ├── evaluate.py         # Script for evaluating the model against Stockfish
     └── train_notebook.ipynb # Notebook for demonstration
 ```
