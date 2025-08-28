@@ -4,6 +4,13 @@ This project is an advanced, high-performance implementation of a chess engine b
 
 This system is designed to be run on powerful hardware (ideally a strong multi-core CPU and a high-end NVIDIA GPU) for extended periods to train a competitive chess model.
 
+## Design Philosophy: Pure Self-Play
+
+A key feature of this advanced architecture is that **it does not use Stockfish** or any other chess engine during its training. This is a deliberate design choice based on the success of systems like AlphaZero.
+
+-   **Previous Approach (Imitation)**: The simpler engine built previously used Stockfish as a "teacher." The goal was to imitate Stockfish's moves and evaluations. This is a good way to create a reasonably strong engine, but its potential is ultimately limited by the teacher's strength.
+-   **This Approach (Self-Discovery)**: This engine learns entirely from self-play. By starting with only the rules of chess and playing millions of games against itself, it is free to discover novel strategies and patterns that may not be part of established chess theory or typical engine play. This "tabula rasa" (blank slate) learning is what gives it the potential to surpass existing engines.
+
 ## Core Architecture
 
 The training pipeline is composed of several key components that run in parallel:
