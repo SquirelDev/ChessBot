@@ -1,12 +1,19 @@
 # Chess RL - A Reinforcement Learning Chess Engine
 
-This project is a simple implementation of a chess engine that learns to play chess using a reinforcement learning approach. The neural network is trained by playing against the Stockfish engine and learning from its evaluations.
+This project implements a chess engine that learns to play chess using an advanced reinforcement learning approach. The neural network is trained by playing games and learning from feedback provided by the Stockfish engine.
 
 ## How It Works
 
-The project consists of two main components:
-1.  **A Neural Network**: A Convolutional Neural Network (CNN) built with TensorFlow/Keras that takes a board position and outputs a policy (the best move to play) and a value (the evaluation of the position).
-2.  **A Training Script**: A Python script that uses multiprocessing to parallelize the training process. Multiple "worker" processes play games against Stockfish to generate data, and a central "learner" process uses this data to train the neural network.
+The project is built around an **Actor-Critic (A2C)** model with an **Experience Replay** buffer.
+
+1.  **Neural Network (Actor-Critic)**: A Convolutional Neural Network (CNN) that acts as both an Actor and a Critic.
+    -   **The Actor (Policy Head)**: Decides which move to play from a given position.
+    -   **The Critic (Value Head)**: Evaluates the current position, predicting the likely outcome.
+
+2.  **Training Process**:
+    -   **Data Generation**: Multiple "worker" processes play games, generating a stream of game data. For each move, the worker stores the state, the model's value prediction for that state, the chosen action, and the "reward" (which is Stockfish's evaluation of the *next* state).
+    -   **Experience Replay**: This game data is stored in a large replay buffer. Storing a long history of experiences and sampling from it randomly helps to stabilize the training process.
+    -   **Learning (A2C)**: A central "learner" process samples batches of data from the replay buffer. It uses the Actor-Critic algorithm to update the network. The "advantage" (how much better the actual outcome was than the Critic's prediction) is used to teach the Actor which moves are good.
 
 ## Getting Started
 

@@ -39,3 +39,10 @@ MODEL_FILENAME = "chess_model.h5"
 
 # The filename for the training log.
 TRAINING_LOG_FILE = "training_log.csv"
+
+# -----------------------------------------------------------------------------
+# Advanced RL Configuration
+# -----------------------------------------------------------------------------
+
+# The maximum number of recent game states to store for experience replay.
+REPLAY_BUFFER_SIZE = 50000

@@ -24,7 +24,8 @@ def create_chess_model(input_shape=BOARD_SHAPE):
     x = layers.Dropout(0.5)(x)
 
     # Policy Head
-    policy_head = layers.Dense(NUM_POSSIBLE_MOVES, activation='softmax', name='policy')(x)
+    # Outputs raw logits. Softmax will be applied in the loss function.
+    policy_head = layers.Dense(NUM_POSSIBLE_MOVES, name='policy')(x)
 
     # Value Head
     value_head = layers.Dense(1, activation='tanh', name='value')(x)

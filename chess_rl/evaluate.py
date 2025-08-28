@@ -9,10 +9,15 @@ import config
 from model import create_chess_model
 from utils import board_to_tensor, move_to_index
 
+import tensorflow as tf
+
 def get_model_move(model, board):
     """Gets the best legal move from the model's policy."""
     board_tensor = np.expand_dims(board_to_tensor(board), axis=0)
-    policy, _ = model.predict(board_tensor, verbose=0)
+    policy_logits, _ = model.predict(board_tensor, verbose=0)
+
+    # Apply softmax to convert logits to probabilities
+    policy = tf.nn.softmax(policy_logits[0]).numpy()
 
     legal_moves = list(board.legal_moves)
     legal_move_indices = [move_to_index(m) for m in legal_moves]

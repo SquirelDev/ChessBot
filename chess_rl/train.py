@@ -3,6 +3,8 @@ import os
 import time
 from queue import Empty
 import csv
+import collections
+import random
 
 import chess
 import numpy as np
@@ -53,9 +55,13 @@ def worker(worker_id, data_queue, model_path):
         game_data = []
 
         while not board.is_game_over(claim_draw=True):
-            # Get model's move
+            # Get model's move and value prediction
             board_tensor = np.expand_dims(board_to_tensor(board), axis=0)
-            policy, value = chess_model.predict(board_tensor)
+            policy_logits, predicted_value = chess_model.predict(board_tensor, verbose=0)
+            predicted_value = predicted_value[0][0] # Get scalar value
+
+            # Apply softmax to get probabilities
+            policy = tf.nn.softmax(policy_logits[0]).numpy()
 
             # Select a move from the policy
             legal_moves = list(board.legal_moves)
@@ -72,19 +78,20 @@ def worker(worker_id, data_queue, model_path):
                 # If policy gives zero probability to all legal moves, choose a random one
                 move = np.random.choice(legal_moves)
 
+            # Store the state and the model's prediction *before* the move
+            state_for_buffer = board_tensor.squeeze(0)
+            value_for_buffer = predicted_value
+            action_for_buffer = move_to_index(move)
+
             board.push(move)
 
-            # Get Stockfish's evaluation and best move
+            # Get Stockfish's evaluation of the *new* position as the reward
             stockfish.set_fen_position(board.fen())
             sf_eval = stockfish.get_evaluation()
-            sf_best_move_uci = stockfish.get_best_move()
+            reward = normalize_stockfish_eval(sf_eval)
 
-            if sf_best_move_uci:
-                sf_best_move = chess.Move.from_uci(sf_best_move_uci)
-                sf_best_move_index = move_to_index(sf_best_move)
-
-                # Store the experience
-                game_data.append((board_tensor.squeeze(0), sf_best_move_index, normalize_stockfish_eval(sf_eval)))
+            # Store the experience for A2C: (state, model_value, action, reward)
+            game_data.append((state_for_buffer, value_for_buffer, action_for_buffer, reward))
 
         # Send collected game data to the learner
         data_queue.put(game_data)
@@ -110,41 +117,71 @@ def learner(data_queue, model_path, log_path):
         print(f"Learner: Loading model from {model_path}")
         chess_model.load_weights(model_path)
 
-    # 2. Setup logging
+    # 2. Setup Experience Replay Buffer and Logging
+    replay_buffer = collections.deque(maxlen=config.REPLAY_BUFFER_SIZE)
     log_file_exists = os.path.exists(log_path)
     with open(log_path, 'a', newline='') as f:
         writer = csv.writer(f)
         if not log_file_exists:
             writer.writerow(['step', 'total_loss', 'policy_loss', 'value_loss', 'timestamp'])
 
-    training_data = []
     step = 0
 
     while True: # Loop indefinitely to train
         try:
-            # Get data from workers
+            # Get data from workers and add to replay buffer
             game_data = data_queue.get(timeout=60) # Wait for 60s
-            training_data.extend(game_data)
+            replay_buffer.extend(game_data)
 
-            if len(training_data) >= config.BATCH_SIZE:
+            if len(replay_buffer) >= config.BATCH_SIZE:
                 step += 1
-                print(f"Learner: Collected {len(training_data)} samples. Starting training step {step}.")
+                print(f"Learner: Buffer size: {len(replay_buffer)}. Starting training step {step}.")
 
-                # Sample a batch from the collected data
-                indices = np.random.choice(len(training_data), config.BATCH_SIZE, replace=False)
-                batch = [training_data[i] for i in indices]
+                # Sample a batch from the replay buffer
+                batch = random.sample(replay_buffer, config.BATCH_SIZE)
 
-                # Unzip the batch
-                board_tensors, policy_targets, value_targets = zip(*batch)
+                # Unzip the batch for A2C: (state, predicted_value, action, reward)
+                states, predicted_values, actions, rewards = zip(*batch)
+
+                states = np.array(states)
+                actions = np.array(actions)
+                rewards = np.array(rewards, dtype=np.float32)
 
                 with tf.GradientTape() as tape:
                     # Forward pass
-                    policy_preds, value_preds = chess_model(np.array(board_tensors))
+                    policy_preds, value_preds = chess_model(states)
 
-                    # Calculate losses
-                    policy_loss = loss_fn_policy(policy_targets, policy_preds)
-                    value_loss = loss_fn_value(value_targets, value_preds)
-                    total_loss = policy_loss + value_loss
+                    # Squeeze value_preds to match dimensions of rewards
+                    value_preds = tf.squeeze(value_preds)
+
+                    # --- Actor-Critic Loss Calculation ---
+
+                    # Calculate Advantage (A = R - V(s))
+                    # R is the reward (from Stockfish's eval of the next state)
+                    # V(s) is our model's value prediction for the current state.
+                    # A high advantage means the action taken led to a better-than-expected outcome.
+                    advantage = rewards - value_preds
+
+                    # 1. Critic Loss (Value Loss)
+                    # The critic learns to evaluate positions better by minimizing the difference
+                    # between its prediction and the actual reward (Stockfish's evaluation).
+                    value_loss = loss_fn_value(rewards, value_preds)
+
+                    # 2. Actor Loss (Policy Loss)
+                    # The actor learns to choose better moves.
+                    # We calculate the cross-entropy loss for the action taken.
+                    policy_loss_per_action = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                        logits=policy_preds, labels=actions
+                    )
+                    # We then weight this loss by the advantage.
+                    # Actions with a high advantage are reinforced (loss is minimized).
+                    # We use stop_gradient because we only want to train the actor here, not the critic.
+                    policy_loss = policy_loss_per_action * tf.stop_gradient(advantage)
+
+                    # 3. Total Loss
+                    # We combine the policy and value losses. The value loss is often weighted
+                    # to stabilize training.
+                    total_loss = tf.reduce_mean(policy_loss + 0.5 * value_loss)
 
                 # Backward pass and optimization
                 grads = tape.gradient(total_loss, chess_model.trainable_variables)
@@ -164,9 +201,6 @@ def learner(data_queue, model_path, log_path):
                 # Save the updated model
                 chess_model.save_weights(model_path)
                 print(f"Learner: Model saved to {model_path}")
-
-                # Clear the training data buffer
-                training_data.clear()
 
         except Empty:
             print("Learner: Queue is empty. No data from workers. Stopping.")
